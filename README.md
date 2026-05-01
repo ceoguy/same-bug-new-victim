@@ -9,17 +9,33 @@
 
 ---
 
+## Prologue
+
+In late March 2026, a senior engineer at Drift Protocol opened a Solana wallet to approve a routine governance transaction. The signing UI showed exactly what they expected. The signature verified cleanly. The transaction looked, by every available indicator, like the kind of thing they signed every other week.
+
+Nine days later, on April 1 at 16:05 UTC, that signature transferred administrative control of a $285 million protocol to North Korean intelligence operatives. The drain that followed took ten seconds.
+
+The contracts behaved correctly. The cryptography held. The audits had not missed anything. The signers had not been incompetent. The protocol failed because the entire defensive perimeter that the industry assumed was sufficient turned out, on inspection, to defend the wrong layer.
+
+This is what 2026's largest Web3 attacks now look like.
+
+---
+
 ## Executive Summary
 
-April 2026 was the worst month for crypto theft since February 2025. Across roughly 30 distinct incidents, attackers extracted between $606 million and $650 million from Web3 protocols, depending on which tracker you trust. Two attacks, the Drift Protocol exploit on April 1 and the KelpDAO bridge exploit on April 18, accounted for about 93% of the month's losses, and both have been attributed by multiple independent investigators to North Korea's Lazarus Group.
+April 2026 was the worst month for crypto theft since February 2025. Across roughly 30 distinct incidents, attackers extracted between $606 million and $650 million from Web3 protocols, depending on which tracker you trust. Two attacks, the Drift Protocol exploit on April 1 and the KelpDAO bridge exploit on April 18, accounted for about 93% of the month's losses. Both have been attributed by multiple independent investigators to North Korea's Lazarus Group.
 
 The headline number is not, by itself, the most interesting fact. The interesting fact is what the two dominant attacks have in common with each other, and what they share with the long tail of smaller April incidents: almost none of them were the result of novel smart contract vulnerabilities. They were failures at the human, operational, and off-chain perimeter, exactly the layer that most existing security tooling does not monitor.
 
 This is the recurrence problem, and it has shifted shape.
 
+> **The contract layer is not the perimeter. It has not been the perimeter for at least 14 months.**
+
+The full dataset of incidents analyzed here is published as [`data/incidents.csv`](data/incidents.csv) under CC BY 4.0. Charts referenced inline are in [`charts/`](charts/).
+
 ---
 
-## 1. What April Actually Cost
+## 1. The Damage
 
 The tracking community has not fully converged on a single April figure, which is itself worth noting:
 
@@ -32,11 +48,15 @@ The discrepancy is methodology, not noise. Trackers differ on whether to include
 
 What this comes to in context: April 2026 alone was approximately 3.7× larger than all of Q1 2026 combined. The monthly losses of roughly $625M exceed the *annual* total losses of multiple prior years in DeFi's history. It is not an outlier in the sense of being random. It is an outlier in the sense of being structural.
 
+![April 2026 incidents by loss size](charts/01_april_incidents.png)
+
+The chart is what the prose cannot do quickly: two attacks dominate to the point of visual absurdity. KelpDAO and Drift between them account for $577M. The other 28 incidents combined account for roughly $48M.
+
 ---
 
 ## 2. Methodology
 
-This piece aggregates incident data from five independent sources, DefiLlama Hacks, REKT News, PeckShield monthly reports, SlowMist HackedDB, and Chainalysis incident analyses, covering the period **April 1 to 30, 2026**. Where these sources disagree on a USD figure (which they often do, because of currency-conversion timing, recovery accounting, and inclusion criteria for partially-stolen funds), I report the range and identify the discrepancy explicitly. Where attribution is contested or preliminary, I report it as such.
+This piece aggregates incident data from five independent sources: DefiLlama Hacks, REKT News, PeckShield monthly reports, SlowMist HackedDB, and Chainalysis incident analyses, covering the period **April 1 to 30, 2026**. Where these sources disagree on a USD figure (which they often do, because of currency-conversion timing, recovery accounting, and inclusion criteria for partially-stolen funds), I report the range and identify the discrepancy explicitly. Where attribution is contested or preliminary, I report it as such.
 
 **Inclusion criteria:**
 - Loss ≥ $1M USD at the time of the incident
@@ -48,13 +68,13 @@ This piece aggregates incident data from five independent sources, DefiLlama Hac
 - Disputed incidents where two or more credible sources disagree on whether an attack actually occurred
 - Sub-$1M incidents (the long tail below this threshold is large but not where the dollar weight is)
 
-**Categorization:** Each incident was assigned a primary vulnerability class drawn from the OWASP Smart Contract Top 10 (2025 edition)[^14], extended with three additional categories (off-chain verifier compromise, signer social engineering, and UI/supply-chain compromise) that the OWASP taxonomy does not explicitly cover but which dominate the dollar-weighted total of recent incidents.
+**Categorization:** Each incident was assigned a primary vulnerability class. The OWASP Smart Contract Top 10 (2025 edition)[^14] anchors the classification, extended with three additional categories (off-chain verifier compromise, signer social engineering, and UI/supply-chain compromise) that the OWASP taxonomy does not explicitly cover but which dominate the dollar-weighted total of recent incidents. The full classified dataset is at [`data/incidents.csv`](data/incidents.csv).
 
-**Limitations:** This is a one-month sample from publicly disclosed sources. Undisclosed incidents (centralized custodians who quietly absorb losses, protocols that paid attacker bounties without public disclosure) are not captured. The total may understate true losses by an unknown but likely material amount.
+**Limitations:** This is a one-month sample from publicly disclosed sources. Undisclosed incidents (centralized custodians who quietly absorb losses, protocols that paid attacker bounties without public disclosure) are not captured. The total may understate true losses by an unknown but likely material amount. Twenty-two sub-$2M incidents are aggregated in the dataset rather than individually enumerated; the raw daily logs are at PeckShield and SlowMist HackedDB.
 
 ---
 
-## 3. The Two Events That Defined the Month
+## 3. The Two Heists That Mattered
 
 ### 3.1 Drift Protocol, $285M (April 1, 2026)
 
@@ -62,11 +82,37 @@ Drift, a Solana-based perpetuals exchange, lost approximately $285 million in wh
 
 Solana supports a feature called **durable nonces**, which allow a transaction to be signed at one moment and broadcast at any later moment without expiring. Standard Solana transactions expire when the recent blockhash they reference rolls off the 150-slot window, roughly 60 seconds under normal conditions. Durable-nonce transactions persist indefinitely until the nonce account is advanced or closed.[^6]
 
-Between March 23 and 30, the attacker constructed a sequence of pre-signed durable-nonce transactions and, via social engineering, induced members of Drift's Security Council to sign them. The transactions transferred administrative control of the protocol to an attacker-controlled address. On April 1, the attacker simply broadcast the already-valid signatures.[^7]
+#### A six-month operation, not a ten-second one
 
-Once in control, the attacker whitelisted a worthless attacker-issued token (CVT) as collateral, posted 500 million CVT, and withdrew $285M in real assets: USDC, SOL, and ETH.[^7]
+Public reporting initially framed the Drift attack as fast. It was not. Chainalysis's post-mortem, supplemented by Elliptic and TRM Labs, traces the operation back to **fall 2025**, when threat actors began cultivating in-person relationships with Drift personnel while posing as a legitimate quantitative trading firm.[^8] A reconstructed timeline:
 
-Chainalysis attributed the operation to a Lazarus subgroup tracked variously as **UNC4736** (Mandiant), **AppleJeus** (campaign name), and **Citrine Sleet** (Microsoft).[^8]
+| Date | Event |
+|---|---|
+| Fall 2025 | Social engineering begins. Attackers pose as a quant fund, build rapport with Drift team. |
+| March 10–11, 2026 | Attack infrastructure funded via Tornado Cash withdrawals. |
+| March 12, 2026 | Fake "CVT" token created. Attacker controls ~80% of supply. |
+| March 23–30, 2026 | Pre-signed durable-nonce transactions prepared. Drift Security Council members socially engineered into blind-signing pre-approvals. |
+| March 26, 2026 | Drift migrates to a new 2-of-5 multisig threshold. Attackers obtain signatures from new signers. |
+| April 1, 16:05:18 UTC | First on-chain transaction transfers admin key to attacker address `H7PiGqqUaanBovwKgEtreJbKmQe6dbq6VTrw6guy7ZgL`. |
+| April 1, 16:05:19 UTC | Second transaction approves and executes the transfer. |
+| April 1, 18:31 UTC | Last confirmed drain transaction. |
+
+Once in control, the attacker whitelisted the fake CVT token as collateral, posted 500 million CVT, and withdrew $285M in real assets. Asset breakdown per Chainalysis:[^8]
+
+- JLP (Jupiter LP token): **$159.3M**
+- USDC: **$71.4M** (initial drain) + $5.3M (later)
+- cbBTC: **$11.3M**
+- USDT: **$5.6M**
+- WETH: **$4.7M**
+- Plus 13 additional tokens.
+
+Funds were swapped via Jupiter to USDC, bridged to Ethereum (first arrival ~23 minutes after takeover), and consolidated into ETH. Notably, on-chain fund flows from the staging wallets trace back to the **Radiant Capital exploit** of October 2024, which is what ties this attribution to UNC4736 with high confidence.[^8]
+
+#### Attribution
+
+Chainalysis attributed the operation to a Lazarus subgroup tracked variously as **UNC4736** (Mandiant), **AppleJeus** (campaign name), and **Citrine Sleet** (Microsoft).[^8] The fund-flow link to Radiant Capital is the load-bearing piece of attribution evidence. Operational tradecraft (multi-month social engineering, Tornado Cash funding, Jupiter-to-bridge laundering pattern) corroborates.
+
+#### What this category actually is
 
 The category this fits into is not "smart contract bug." It fits into **privileged-access compromise**, the same category as Ronin Bridge ($625M, 2022), Harmony Horizon ($100M, 2022), and Bybit ($1.46B, February 2025). Drift's specific twist was the abuse of a legitimate Solana feature to make the social-engineering payoff invisible at signing time. The signers thought they were signing routine governance. They were signing the protocol away.
 
@@ -80,7 +126,7 @@ KelpDAO's rsETH bridge ran on LayerZero, using LayerZero's Decentralized Verifie
 
 The attackers, again attributed to Lazarus, this time the TraderTraitor subgroup, did not exploit a smart contract. They poisoned the off-chain RPC infrastructure the DVN used to read source-chain state. According to Hypernative's post-mortem, the attackers compromised a quorum of the RPC nodes the LayerZero Labs DVN relied on, then launched a DDoS against the external RPC node to force failover onto attacker-controlled nodes.[^9] OpenZeppelin's analysis, titled *"Zero Bugs Found,"* made the same point bluntly: every smart contract behaved exactly as written.[^10]
 
-With the DVN's view of the source chain now under attacker control, the verifier signed an attestation for a `PacketSent` event that **was never actually emitted on-chain**. The bridge minted 116,500 unbacked rsETH on the destination chain. The attackers used it as collateral on lending protocols, borrowed legitimate ETH against it, and laundered through Tornado Cash.[^11]
+With the DVN's view of the source chain now under attacker control, the verifier signed an attestation for a `PacketSent` event that **was never actually emitted on-chain**. The bridge minted **116,500 unbacked rsETH** on the destination chain. At ETH spot of approximately $2,349 on April 17 (rsETH typically trading at a 5–7% premium to ETH due to restaking yield),[^26] the rsETH face value was approximately $292M, matching the reported loss. The attackers used the synthetic rsETH as collateral on lending protocols, borrowed legitimate ETH against it, and laundered through Tornado Cash.[^11]
 
 The attacker infrastructure was designed to self-destruct. The modified node binaries, logs, and configs wiped themselves once the attack window closed.[^9]
 
@@ -100,7 +146,9 @@ To understand why April matters beyond its dollar total, place it on a timeline.
 
 **April 18, 2026: KelpDAO, $292 million.** Lazarus did not breach KelpDAO's contracts. They poisoned the off-chain RPC infrastructure that LayerZero's verifier relied on, forced failover via DDoS, and induced the verifier to attest a cross-chain message that was never emitted on-chain.[^9] OpenZeppelin's review found zero contract bugs.[^10]
 
-Three nine-figure incidents in fourteen months. Combined: **$2.04 billion**. Combined contract-level code bugs: zero.
+> **Three nine-figure incidents in fourteen months. Combined: $2.04 billion. Combined contract-level code bugs: zero.**
+
+![14-month arc](charts/02_14_month_arc.png)
 
 The pattern is not subtle. The most sophisticated attackers operating in Web3 today have systematically moved their work to the parts of the system that contract auditors do not audit and contract monitors do not monitor:
 
@@ -116,7 +164,7 @@ This is the single most important shift in Web3 security since the move from cus
 
 ---
 
-## 5. The Contagion: How a $292M Exploit Triggered a $13B Capital Flight
+## 5. Composability Cuts Both Ways
 
 A separate failure mode worth examining is that KelpDAO did not stay contained.
 
@@ -133,6 +181,8 @@ The contagion pattern that followed:
 | April 20 | DeFi TVL bottom | **$86.3B** ($13.21B drop)[^19] |
 | April 25 | Estimated bad debt across affected lending | **$124M to $230M**[^21] |
 
+![DeFi TVL exodus](charts/03_tvl_exodus.png)
+
 A precise framing matters here, because TVL outflow is *not* the same as realized loss. Most of the $13.21B in capital flight reappeared within days in CEX custody, stablecoins, or competitor protocols. The realized secondary loss is the bad debt across affected lending protocols, currently estimated at $124M to $230M, plus the depeg risk and opportunity cost the system absorbed during the flight. That is itself a number comparable to the original theft, but it is not 45× larger.
 
 The right characterization is: **a $292M exploit at a single bridge triggered the steepest two-day DeFi TVL drop since the LUNA-UST collapse of May 2022, and produced realized secondary losses on the order of the original theft itself.** That is bad enough. Don't oversell it.
@@ -141,11 +191,13 @@ The systemic point survives. This is what happens when synthetic assets are acce
 
 The Bybit hack, in retrospect, was contained. It cost Bybit $1.46B but did not produce a market-wide deleveraging event. KelpDAO did. The reason is composability: in DeFi, an exploit on one protocol can become collateral on another protocol within the same block.
 
-The defensive lesson is uncomfortable. **The security of any DeFi lending market is bounded by the security of the weakest issuer of any asset it accepts as collateral.** Aave's contracts were fine. Aave's risk model was the right one for normal conditions. Neither helped when the issuer of a whitelisted collateral asset turned out to have a 1-of-1 verifier configuration on a bridge.
+> **The security of any DeFi lending market is bounded by the security of the weakest issuer of any asset it accepts as collateral.**
+
+Aave's contracts were fine. Aave's risk model was the right one for normal conditions. Neither helped when the issuer of a whitelisted collateral asset turned out to have a 1-of-1 verifier configuration on a bridge.
 
 ---
 
-## 6. The Long Tail: 28 Incidents Below the Headlines
+## 6. Below the Headlines, the Same Mistakes
 
 If you remove Drift and KelpDAO, April looks ordinary, and that is itself the most important fact about the long tail. The base rate of routine exploitation has not changed.
 
@@ -173,21 +225,25 @@ If the industry could deploy a defensive minimum across the long tail (guardian 
 
 It is tempting to read "North Korea did 76% of 2026 crypto theft with two attacks"[^16] as a story about state actors, sanctions, and geopolitics. That framing is correct but incomplete. The more useful framing for protocol teams is operational.
 
-**Lazarus operates at a level of preparation, patience, and infrastructure that is not characteristic of "hacking."** Drift was prepared between March 23 and 30, eight days of reconnaissance, social engineering, and pre-signing, for an attack that took ten seconds to execute on April 1.[^5] KelpDAO required compromising a quorum of RPC nodes the LayerZero DVN relied on, deploying self-destructing malicious binaries on those nodes, and coordinating a DDoS to force failover at the precise moment of attack.[^9] Bybit required a multi-month operation that compromised a developer machine at Safe, surveilled Bybit's signing patterns, and timed the malicious JavaScript injection to a specific cold-wallet transaction that took minutes to execute and was reversed within two minutes.[^17]
+**Lazarus operates at a level of preparation, patience, and infrastructure that is not characteristic of "hacking."** Drift was the result of a *six-month* social engineering operation that began in fall 2025: in-person rapport-building, careful selection of who to compromise, multiple staged technical preparations, and a final ten-second execution window.[^8] KelpDAO required compromising a quorum of RPC nodes the LayerZero DVN relied on, deploying self-destructing malicious binaries on those nodes, and coordinating a DDoS to force failover at the precise moment of attack.[^9] Bybit required a multi-month operation that compromised a developer machine at Safe, surveilled Bybit's signing patterns, and timed the malicious JavaScript injection to a specific cold-wallet transaction that took minutes to execute and was reversed within two minutes.[^17]
 
 This is the methodology of an intelligence service, not a hobbyist. Three implications for defenders:
 
-**1. Time-to-attack is measured in months, not blocks.** The mempool monitoring industry has optimized for catching exploits in the seconds before settlement. That window is the wrong window. By the time the funds move, the attack has already succeeded. Every preparatory step happened weeks earlier, mostly off-chain. The defensible window starts at the first reconnaissance signal: a new contract from an unfamiliar funded-via-mixer address inspecting your protocol, an unusual social-engineering attempt against a signer, an anomalous read pattern from a new RPC source.
+**1. Time-to-attack is measured in months, not blocks.** The mempool monitoring industry has optimized for catching exploits in the seconds before settlement. That window is the wrong window. By the time the funds move, the attack has already succeeded. Every preparatory step happened weeks earlier, mostly off-chain. The defensible window starts at the first reconnaissance signal: a new contract from an unfamiliar funded-via-mixer address inspecting your protocol, an unusual social-engineering attempt against a signer, an anomalous read pattern from a new RPC source, an unfamiliar "quant fund" requesting introductions to your team.
 
 **2. Laundering is a solved problem from the attacker side.** Despite the Tornado Cash sanctions of 2022 and the takedowns of Sinbad.io and Blender.io, Lazarus has resumed routing stolen funds through Tornado Cash following the U.S. Treasury's sanctions removal in March 2025.[^22] Elliptic and TRM Labs have documented over $100 million in HTX/HECO theft proceeds laundered through Tornado Cash since March 2024 alone.[^23] The defensive assumption that "they can't get the money out" is false. They can, and they do, and the legal environment for mixers is in flux in their favor.
 
 **3. The economics make this a permanent feature, not a phase.** North Korea has stolen more than $6 billion in cryptocurrency since 2017,[^16] and the marginal cost of running an additional Lazarus operation against a Web3 protocol is, for them, close to zero. The operations pay for themselves an order of magnitude over and they fund a state weapons program. There is no scenario in which this stops absent a defensive shift in the industry. My estimate, based on the historical Lazarus target distribution, is that any protocol with TVL above approximately $50M is now within their cost-effective targeting range. This is analytical inference, not published data, and I'd welcome correction from TRM, Chainalysis, or others with better visibility into operational economics on the attacker side.
 
+> **Time-to-attack is measured in months, not blocks. The mempool monitoring industry has optimized for the wrong window.**
+
+What this means in practice for a protocol founder: if you have $100M in TVL and you have not been quietly targeted by a Lazarus reconnaissance operation in the last twelve months, you are either lucky or you have not yet been noticed. Plan accordingly.
+
 ---
 
 ## 8. The Recurring Vulnerability Classes
 
-The OWASP Smart Contract Top 10 (2025 edition) ranks access-control failures as the leading cause of smart-contract loss, with **roughly $1.83B, about 59% of all H1 2025 losses, attributable to access control alone.**[^14] Oracle manipulation remains a steady runner-up, with single-year totals exceeding $400M historically.[^15] Logic errors, reentrancy, and flash-loan economic attacks make up the persistent base rate.
+Industry security firm reporting (Hacken, CertiK, Chainalysis) consistently ranks **access-control failures as the leading cause of smart-contract loss in 2025**, with reported H1 2025 totals around $1.8B (roughly 59% of the total). Oracle manipulation remains a steady runner-up, with single-year totals exceeding $400M historically.[^15] Logic errors, reentrancy, and flash-loan economic attacks make up the persistent base rate. (Note: the cited 59% / $1.83B figure is widely reproduced across vendor reports; readers wanting the primary aggregation should consult the original Hacken H1 2025 report and cross-reference Chainalysis crime data.)
 
 These categories are not new. They are well-documented, well-audited-against, and well-monitored by tools like Hypernative, Hexagate, BlockSec Phalcon, Forta, and OpenZeppelin Defender.
 
@@ -214,7 +270,7 @@ In short: there are now **two distinct security problems**, requiring two distin
 
 ---
 
-## 9. What's Working
+## 9. The Defenses That Worked This Year
 
 Honest credit, because this section is where credibility is earned:
 
@@ -250,11 +306,13 @@ The reason is not cost. The reason is that:
 3. **Audit-as-checkbox culture conflates "audited" with "secure."** A protocol with three audits is treated by both founders and users as defended, despite the audit's inability to address operational security.
 4. **Insurance markets are thin.** Nexus Mutual has paid $18M in claims against $6B in cumulative cover sold. A small dataset that makes pricing hard and capacity limited.[^25] Major incidents ($285M+) exceed the capacity of the entire on-chain insurance market.
 
+> **Audit-as-checkbox culture conflates "audited" with "secure."**
+
 The right corrective is not regulatory, in my view. It is **defensive infrastructure that is cheap, accessible, and obvious enough to install that the long tail of protocols defaults to it the way they default to using OpenZeppelin's contract libraries.** That category of product does not yet exist at scale.
 
 ---
 
-## 11. The Defense-in-Depth Checklist
+## 11. Ten Things to Do Before Friday
 
 A 10-item checklist for protocol teams, ranked by leverage. Every item is grounded in an incident from the last 14 months.
 
@@ -271,6 +329,8 @@ A 10-item checklist for protocol teams, ranked by leverage. Every item is ground
 
 This list is not exhaustive. It is, however, the minimum viable defensive posture for any protocol with TVL above $50M in 2026.
 
+If you run a protocol above that threshold and you cannot honestly check eight of these ten today, that is the work for next week.
+
 ---
 
 ## 12. Closing: Where the Industry Needs to Go
@@ -281,7 +341,29 @@ The defensive layer that closes this gap will not look like another smart-contra
 
 That is the layer the industry needs. As of this writing, it is not the layer the industry has.
 
-The same bugs are no longer the same bugs. They live in different parts of the stack now. The defense has to follow.
+> **The same bugs are no longer the same bugs. They live in different parts of the stack now. The defense has to follow.**
+
+---
+
+## 13. Predictions for Q2–Q3 2026
+
+A research piece earns its keep by being falsifiable. If the thesis of this report is correct, the second and third quarters of 2026 should produce specific, observable patterns. If they don't, the thesis is wrong, and I'd rather be told so than continue defending it.
+
+**My predictions, in order of conviction:**
+
+**P1 (high conviction).** Of any incident above $50M in losses between May 1, 2026 and September 30, 2026, **at least 60% by dollar weight will involve an off-chain or human-layer primary vector** (signer compromise, supply-chain compromise, off-chain verifier compromise, or operational key compromise) rather than a pure smart-contract code bug. *Falsified if dollar-weighted off-chain share drops below 40%.*
+
+**P2 (high conviction).** **At least one additional nine-figure incident will be attributed to Lazarus / DPRK** in the Q2–Q3 window, continuing the cadence of one major op per ~5–6 months observed across Bybit (Feb 2025), Drift (Apr 2026), and KelpDAO (Apr 2026). *Falsified if no DPRK-attributed nine-figure incident lands in Q2–Q3.*
+
+**P3 (medium conviction).** **At least one liquid restaking token (LRT) or liquid staking token (LST) issuer other than KelpDAO will be attacked at the off-chain verifier or bridge-configuration layer.** The LRT/LST sector has the worst combination of high TVL, complex bridge dependencies, and inconsistent verifier configurations. *Falsified if no LRT/LST issuer is breached in the next two quarters via this class.*
+
+**P4 (medium conviction).** **At least one major DeFi lending protocol will publicly tighten its risk-parameter rules for accepting LRTs as collateral**, citing KelpDAO-style issuer risk specifically. *Falsified if no major lender (Aave, Morpho, Compound, Spark, etc.) makes a material parameter change in the next 90 days.*
+
+**P5 (lower conviction, more interesting if true).** **At least one well-known protocol will quietly disclose a near-miss** (a reconnaissance event that was caught before execution, or a social-engineering attempt against a signer that was correctly identified). The increase in attacker preparation time means defenders will increasingly *have* a window to detect operations in flight, if they are watching. *Falsified if no such disclosure surfaces.*
+
+**P6 (lowest conviction, biggest if right).** **The first protocol to ship credible runtime monitoring for the off-chain perimeter (RPC integrity, signer behavior, signing-UI provenance) at long-tail-affordable price points will achieve fast adoption**, measured in 100+ paying protocols within 12 months of launch. The market is unmet, the demand is created by every new headline, and the technical bar is moderate. *Falsified if no such product gains material adoption within 12 months of launch.*
+
+I'll revisit these predictions in October 2026 and grade them honestly.
 
 ---
 
@@ -293,7 +375,7 @@ The same bugs are no longer the same bugs. They live in different parts of the s
 
 **OApp:** A LayerZero-integrated cross-chain application. The OApp's security depends on its DVN configuration.
 
-**rsETH:** Liquid restaking token issued by KelpDAO. Each rsETH is meant to be backed 1:1 by ETH staked through EigenLayer.
+**rsETH:** Liquid restaking token issued by KelpDAO. Each rsETH is meant to be backed 1:1 by ETH staked through EigenLayer. Typically trades at a 5–7% premium to ETH due to accumulated restaking yield.
 
 **RPC node:** Remote Procedure Call endpoint that returns blockchain state to off-chain consumers. Bridges, oracles, indexers, and verifiers all rely on RPC nodes to read source-chain data. Compromising RPC infrastructure can cause downstream systems to act on a falsified view of chain state.
 
@@ -302,6 +384,10 @@ The same bugs are no longer the same bugs. They live in different parts of the s
 **Timelock:** A delay between when a privileged action is proposed and when it can be executed, allowing the community time to detect and respond to malicious proposals.
 
 **Liquid Restaking Token (LRT):** A token representing a claim on ETH that has been staked and then re-staked through a service like EigenLayer. Designed to remain liquid while the underlying ETH earns staking yield. Acceptance of LRTs as collateral by lending protocols introduces the counterparty risk of the LRT issuer's bridge and verifier infrastructure.
+
+**UNC4736 / AppleJeus / Citrine Sleet:** Three names for the same Lazarus subgroup, tracked respectively by Mandiant, the original campaign naming convention, and Microsoft. Specializes in long-duration social engineering operations against crypto and fintech targets.
+
+**TraderTraitor:** A separate Lazarus subgroup attributed to the KelpDAO operation. Specializes in supply-chain and infrastructure compromise.
 
 ---
 
@@ -320,7 +406,7 @@ The same bugs are no longer the same bugs. They live in different parts of the s
 [^11]: [Inside the KelpDAO Bridge Exploit, Chainalysis](https://www.chainalysis.com/blog/kelpdao-bridge-exploit-april-2026/)
 [^12]: [Explained: The Rhea Finance Hack April 2026, Halborn](https://www.halborn.com/blog/post/explained-the-rhea-finance-hack-april-2026)
 [^13]: [Volo Protocol loses $3.5 million in exploit days after KelpDAO's breach, CoinDesk](https://www.coindesk.com/markets/2026/04/22/another-defi-protocol-loses-millions-in-hack-days-after-kelpdao-breach)
-[^14]: [SC02:2025, Price Oracle Manipulation, OWASP Smart Contract Top 10](https://owasp.org/www-project-smart-contract-top-10/2025/en/src/SC02-price-oracle-manipulation.html)
+[^14]: [OWASP Smart Contract Top 10 (2025 edition)](https://owasp.org/www-project-smart-contract-top-10/)
 [^15]: [Why DEX Exploits Cost $3.1B in 2025, Yellow Research](https://yellow.com/research/why-dex-exploits-cost-dollar31b-in-2025-analysis-of-12-major-hacks)
 [^16]: [North Korea Stole 76% of All Crypto Hack Value in 2026, TRM Labs](https://www.trmlabs.com/resources/blog/north-korea-stole-76-of-all-crypto-hack-value-in-2026-with-just-two-attacks)
 [^17]: [In-Depth Technical Analysis of the Bybit Hack, NCC Group](https://www.nccgroup.com/research/in-depth-technical-analysis-of-the-bybit-hack/)
@@ -332,21 +418,32 @@ The same bugs are no longer the same bugs. They live in different parts of the s
 [^23]: [North Korea's Lazarus Group moves funds through Tornado Cash, TRM Labs](https://www.trmlabs.com/resources/blog/north-koreas-lazarus-group-moves-funds-through-tornado-cash)
 [^24]: Industry estimates aggregated from public quotes by Trail of Bits, OpenZeppelin, and Spearbit. Numbers vary materially by scope and protocol complexity.
 [^25]: [Nexus Mutual, Crypto Insurance Alternative & DeFi Cover](https://nexusmutual.io/)
+[^26]: ETH spot reference: approximately $2,349 on April 17, 2026 (range $2,250–$2,400 across the week). rsETH typically trades at a 5–7% premium to ETH due to restaking yield.
 
 ---
 
 ## About the Author
 
-Ilan Rakhmanov is the Founder & CEO of ChainGPT Software. ChainGPT operates an AI-native infrastructure stack for Web3, including the ChainGPT Pad launchpad, AI development tools, and on-chain agent infrastructure.
+I run an AI infrastructure company in Web3.
 
-This piece is research, not a product announcement. ChainGPT may or may not build defensive infrastructure of the kind described in the closing section. The position taken here is that the industry needs that layer regardless of who builds it.
+We've watched the security shift described in this piece happen in real time, and frankly, it scares us. When a state-sponsored adversary spends six months running a social engineering operation against a protocol team, prepares pre-signed transactions weeks in advance, and exits with $285M in ten seconds: that is not the threat model the industry has been defending against. We've been auditing the wrong layer.
 
----
+This is research, not marketing. ChainGPT may or may not build defensive tooling in this space; what is certain is that someone has to. If you're working on this problem, in any form, I want to hear from you.
 
-## License
-
-This research report is published under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). You may share, quote, and adapt the work with attribution.
+*Ilan Rakhmanov, Founder & CEO, ChainGPT Software*
 
 ---
 
-*Corrections, additional sources, or technical disputes: open an issue on this repository or contact the author directly.*
+## Repository
+
+This report and its supporting data are open source under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+
+- 📄 The report: this README
+- 📊 Dataset: [`data/incidents.csv`](data/incidents.csv) ([schema](data/README.md))
+- 📈 Charts and source: [`charts/`](charts/)
+
+Corrections, additional sources, attribution disputes, or technical critiques: please open an issue on this repository. I will engage with substantive critique and update the dataset accordingly. Predictions in §13 will be revisited and graded publicly in October 2026.
+
+If you want to cite this work:
+
+> Rakhmanov, I. (2026). *Same Bug, New Victim: A Forensic Read on Web3's $600M April*. https://github.com/ceoguy/same-bug-new-victim
